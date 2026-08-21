@@ -26,3 +26,6 @@ htmlcov/
 .vscode/
 *.swp
 .DS_Store
+
+dsd_logs/
+
