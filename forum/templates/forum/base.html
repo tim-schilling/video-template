@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Forum{% endblock %}</title>
+</head>
+<body>
+  <nav>
+    <a href="{% url 'topic-list' %}">Topics</a>
+    {% if user.is_authenticated %}
+      <a href="{% url 'topic-create' %}">New topic</a>
+      <span>{{ user }}</span>
+      <form method="post" action="{% url 'logout' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit">Log out</button>
+      </form>
+    {% else %}
+      <a href="{% url 'login' %}">Log in</a>
+      <a href="{% url 'signup' %}">Sign up</a>
+    {% endif %}
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

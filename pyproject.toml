@@ -1,0 +1,44 @@
+[project]
+name = "django-howto-template"
+version = "0.1.0"
+description = "A minimal Django project template demonstrating uv, just, Postgres, Django Tasks (DB backend), and django-prodserver."
+requires-python = ">=3.12"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+  "dj-database-url>=2",
+  "django>=6",
+  "django-prodserver[gunicorn]>=3",
+  "django-tasks>=0.12",
+  "django-tasks-db>=0.12",
+  "psycopg[binary]>=3.2",
+  "python-dotenv>=1",
+  "whitenoise>=6",
+]
+
+[dependency-groups]
+dev = [
+  "dsd-pythonanywhere>=0.1.1",
+  "factory-boy>=3.3",
+  "pre-commit>=4",
+  "pytest>=8",
+  "pytest-django>=4.9",
+  "ruff>=0.16",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+lint.select = [ "B", "DJ", "E", "F", "I", "UP", "W" ]
+lint.isort.known-first-party = [ "config", "forum" ]
+
+[tool.pytest]
+ini_options.python_files = [ "test_*.py", "tests.py" ]
+ini_options.DJANGO_SETTINGS_MODULE = "config.settings"

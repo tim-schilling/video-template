@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  DEBUG: "True"
+  SECRET_KEY: ci-secret-key
+  POSTGRES_DB: forum
+  POSTGRES_USER: forum
+  POSTGRES_PASSWORD: forum
+  POSTGRES_HOST: localhost
+  POSTGRES_PORT: "5432"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: forum
+          POSTGRES_USER: forum
+          POSTGRES_PASSWORD: forum
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U forum"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v3
+      - name: Install dependencies
+        run: just install
+      - name: Check for missing migrations
+        run: just manage makemigrations --check --dry-run
+      - name: Run tests
+        run: just test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v3
+      - name: Install dependencies
+        run: just install
+      - name: Run pre-commit
+        run: just lint

@@ -1,0 +1,44 @@
+default_language_version:
+  python: python3.13
+
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+  hooks:
+  - id: check-added-large-files
+  - id: check-case-conflict
+  - id: check-json
+  - id: check-merge-conflict
+  - id: check-symlinks
+  - id: check-toml
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+- repo: https://github.com/crate-ci/typos
+  rev: v1.49.0
+  hooks:
+  - id: typos
+- repo: https://github.com/tox-dev/pyproject-fmt
+  rev: v2.28.0
+  hooks:
+  - id: pyproject-fmt
+- repo: https://github.com/tox-dev/tox-ini-fmt
+  rev: 1.9.0
+  hooks:
+  - id: tox-ini-fmt
+- repo: https://github.com/adamchainz/django-upgrade
+  rev: 1.32.0
+  hooks:
+  - id: django-upgrade
+    args: [--target-version, "6.0"]
+- repo: https://github.com/adamchainz/blacken-docs
+  rev: v1.12.1
+  hooks:
+  - id: blacken-docs
+    additional_dependencies:
+    - black==26.5.1
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.16.4
+  hooks:
+    - id: ruff-check
+      args: [--fix]
+    - id: ruff-format

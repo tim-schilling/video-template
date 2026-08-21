@@ -1,0 +1,30 @@
+{% extends "forum/base.html" %}
+
+{% block title %}{{ topic.title }}{% endblock %}
+
+{% block content %}
+  <h1>{{ topic.title }}</h1>
+  <p>by {{ topic.author }}</p>
+  <p>{{ topic.body }}</p>
+
+  <h2>Comments</h2>
+  <ul>
+    {% for comment in comments %}
+      <li>
+        <strong>{{ comment.author }}</strong>: {{ comment.body }}
+      </li>
+    {% empty %}
+      <li>No comments yet.</li>
+    {% endfor %}
+  </ul>
+
+  {% if user.is_authenticated %}
+    <form method="post" action="{% url 'comment-create' topic.pk %}">
+      {% csrf_token %}
+      {{ comment_form.as_p }}
+      <button type="submit">Add comment</button>
+    </form>
+  {% else %}
+    <p><a href="{% url 'login' %}">Log in</a> to comment.</p>
+  {% endif %}
+{% endblock %}

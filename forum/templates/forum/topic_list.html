@@ -1,0 +1,17 @@
+{% extends "forum/base.html" %}
+
+{% block title %}Topics{% endblock %}
+
+{% block content %}
+  <h1>Topics</h1>
+  <ul>
+    {% for topic in topics %}
+      <li>
+        <a href="{% url 'topic-detail' topic.pk %}">{{ topic.title }}</a>
+        by {{ topic.author }}
+      </li>
+    {% empty %}
+      <li>No topics yet.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}
