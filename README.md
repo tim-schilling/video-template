@@ -69,36 +69,22 @@ users need actual emails.
 
 ## Deploying to PythonAnywhere
 
-This project can be deployed to a PythonAnywhere
+Deploys to a free PythonAnywhere
 [Beginner account](https://www.pythonanywhere.com/registration/register/beginner/)
-(free, no credit card) via
-[`django-simple-deploy`](https://django-simple-deploy.readthedocs.io/) and the
-[`dsd-pythonanywhere`](https://github.com/caktus/dsd-pythonanywhere) plugin, both
-already in the `dev` dependency group.
+via [`django-simple-deploy`](https://django-simple-deploy.readthedocs.io/) and the
+[`dsd-pythonanywhere`](https://github.com/caktus/dsd-pythonanywhere) plugin (dev
+dependencies). It's still in active development — review what it changes before
+relying on it.
 
 **Prerequisites:**
 
-- The [`op` CLI](https://developer.1password.com/docs/cli/) installed and signed in.
-- A 1Password item named "Python Anywhere" (in the `Private` vault) with a
-  `username` field (your PythonAnywhere username) and an `api-token` field (from
-  [Account → API Token](https://help.pythonanywhere.com/pages/GettingYourAPIToken)).
-  `.env.pythonanywhere` references these as `op://Private/Python Anywhere/username`
-  and `op://Private/Python Anywhere/api-token` — update it if your vault/item/field
-  names differ. It holds only `op://` references, not secrets, so it's safe to commit.
-- A GitHub (or similar) remote for this repo — the plugin pushes your default
-  branch and clones it on PythonAnywhere.
-- Stay logged in to PythonAnywhere in your default browser during deployment; the
-  plugin opens a browser console it needs a human session to start.
-
-**Beginner-tier constraints already accounted for:**
-
-- No Postgres/MySQL access, so `DATABASES` falls back to SQLite via
-  `DATABASE_URL` when nothing else is configured — see `config/settings.py`.
-- No always-on/scheduled tasks, so `TASKS` switches to `django_tasks`'s
-  `ImmediateBackend` (runs synchronously in the request) when the plugin's
-  `ON_PYTHONANYWHERE` env var is set, instead of queuing to a `db_worker` that
-  can never run.
-- No custom domains — the app is served from `<username>.pythonanywhere.com`.
+- The [`op` CLI](https://developer.1password.com/docs/cli/), signed in, with a
+  "Python Anywhere" item (`Private` vault, per `.env.pythonanywhere`) holding
+  `username` and `api-token` fields.
+- A GitHub (or similar) remote for this repo — the plugin pushes to it and clones
+  it on PythonAnywhere.
+- Stay logged into PythonAnywhere in your default browser during deploy; the
+  plugin opens a browser console that needs a human session to start.
 
 **Deploying:**
 
@@ -107,24 +93,20 @@ just deploy-pythonanywhere-plan   # generates a plan without touching PythonAnyw
 just deploy-pythonanywhere        # --automate-all: pushes, deploys, and opens the site
 ```
 
-Both recipes regenerate `requirements.txt` from `uv.lock` first — PythonAnywhere's
-setup script `pip install`s from it, not `uv.lock`. `django-simple-deploy` also
-appends `dsd-pythonanywhere`, `django-simple-deploy`, `python-dotenv`, and
-`dj-database-url` to `requirements.txt` when it runs; `dsd-pythonanywhere` and
-`django-simple-deploy` aren't needed at runtime (only to run `manage.py deploy`),
-and installing the former from its git dependency may not work against
-PythonAnywhere's outbound-access allowlist, so remove those two lines from
-`requirements.txt` before committing/pushing.
+Both recipes run `scripts/repair_pythonanywhere_deploy.py` afterward, which fixes
+two things the plugin gets wrong: it pollutes `requirements.txt` with packages
+only needed to run `manage.py deploy`, not the deployed app, and (with `--remote`,
+used by `deploy-pythonanywhere`) it can leave the PythonAnywhere WSGI file
+pointing at nothing. See the script's docstring for details.
 
-After a deploy, check the PythonAnywhere-specific block the plugin appends to the
-bottom of `config/settings.py`: its own `DEBUG = os.getenv("DEBUG") == "TRUE"`
-overrides ours and runs *after* the `if not DEBUG:` security block above, so set
-`DEBUG=FALSE` in the `.env` file it creates on PythonAnywhere (not the `TRUE`
-default from its setup script) — otherwise the site runs with `DEBUG=True` in
-production.
+After deploying, set `DEBUG=FALSE` in the PythonAnywhere `.env` file — the
+plugin's setup script defaults it to `TRUE`, which would run production with
+debug mode on.
 
-`dsd-pythonanywhere` is still in active development and its README doesn't yet
-recommend it for real deployments — review what it changes before relying on it.
+Beginner-tier limits already handled in `config/settings.py`: SQLite fallback
+when no `DATABASE_URL` is set, tasks run synchronously instead of queuing to a
+worker, and the app is served from `<username>.pythonanywhere.com` (no custom
+domains).
 
 ## Testing & linting
 

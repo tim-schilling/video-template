@@ -1,19 +1,20 @@
 """Repair the parts of a PythonAnywhere deploy that django-simple-deploy leaves broken.
 
-Two known failure modes, both silent:
+Two known failure modes:
 
 1. `manage.py deploy` (dsd-pythonanywhere) always appends `django-simple-deploy`
    and `dsd-pythonanywhere` to requirements.txt, even though they're only needed
    to run the deploy command, not at runtime. Installing dsd-pythonanywhere's
    git+https dependency often fails on PythonAnywhere's Beginner-tier outbound
-   allowlist.
-2. The plugin copies config/wsgi.py to PythonAnywhere's WSGI config file by
-   running `cp` in a bash console (dsd_pythonanywhere.platform_deployer
-   .PlatformDeployer._copy_wsgi_file). Console commands aren't checked for
-   exit status, so if that `cp` fails -- wrong cwd, race with webapp
-   creation, whatever -- PythonAnywhere's default "Hello, World!" WSGI file
-   is left in place, on the very first deploy, and nothing downstream
-   notices.
+   allowlist, which can break the rest of an --automate-all run.
+2. PythonAnywhere's `/var/www/<domain>_wsgi.py` doesn't reliably get updated by
+   dsd-pythonanywhere's own `cp` (run through a bash console with no exit-status
+   check) or by writing it through the Files API's `path_post` -- that call
+   reports success and a follow-up GET even echoes back the new content, but
+   the real on-disk file (the one PythonAnywhere actually serves, and the one
+   a console `cat` shows) can be left untouched. A `cp` run directly in a PA
+   console is the only method confirmed to actually persist here, so that's
+   what this script uses, with a same-console read-back to verify it landed.
 
 Run standalone (`just deploy-pythonanywhere-plan`) to just clean
 requirements.txt locally, matching what django-simple-deploy's non-automated
@@ -21,10 +22,9 @@ requirements.txt locally, matching what django-simple-deploy's non-automated
 
 Run with --remote (`just deploy-pythonanywhere`, after --automate-all has
 already committed/pushed/deployed) to also commit and push the requirements.txt
-fix, then, unconditionally (first deploy or the hundredth), reinstall
-requirements, overwrite PythonAnywhere's WSGI file via the Files API (not the
-fragile console `cp`) with this repo's config/wsgi.py, and reload the webapp --
-so the site is left working with no manual PA console or Web-tab steps, ever.
+fix, then, unconditionally (first deploy or the hundredth), pull, reinstall
+requirements, re-copy the WSGI file, verify it, and reload the webapp -- so the
+site is left working with no manual PA console or Web-tab steps.
 """
 
 import argparse
@@ -35,17 +35,7 @@ from pathlib import Path
 from dsd_pythonanywhere.client import PythonAnywhereClient
 
 DEPLOY_ONLY_PACKAGES = ("django-simple-deploy", "dsd-pythonanywhere")
-REPO_ROOT = Path(__file__).resolve().parent.parent
-REQUIREMENTS_PATH = REPO_ROOT / "requirements.txt"
-WSGI_PATH = REPO_ROOT / "config" / "wsgi.py"
-
-# pythonanywhere_core.files.Files computes its API base URL from the username
-# at import time (via get_username(), which reads PYTHONANYWHERE_USERNAME),
-# so this must be set before that module is first imported below.
-if "API_USER" in os.environ:
-    os.environ.setdefault("PYTHONANYWHERE_USERNAME", os.environ["API_USER"])
-
-from pythonanywhere_core.files import Files  # noqa: E402
+REQUIREMENTS_PATH = Path(__file__).resolve().parent.parent / "requirements.txt"
 
 
 def package_name(requirement_line: str) -> str:
@@ -86,15 +76,22 @@ def reinstall_requirements(client: PythonAnywhereClient, repo_name: str) -> None
     client.run_command(f"cd ~/{repo_name} && git pull && pip install -r requirements.txt")
 
 
-def sync_wsgi_file(client: PythonAnywhereClient) -> None:
+def sync_wsgi_file(client: PythonAnywhereClient, repo_name: str) -> None:
+    wsgi_src = f"~/{repo_name}/config/wsgi.py"
     wsgi_dest = f"/var/www/{client.domain_name.replace('.', '_')}_wsgi.py"
-    Files().path_post(wsgi_dest, WSGI_PATH.read_bytes())
+
+    client.run_command(f"cp {wsgi_src} {wsgi_dest}")
+
+    result = client.run_command(f"cmp -s {wsgi_src} {wsgi_dest} && echo COPY_OK || echo COPY_FAILED")
+    if "COPY_OK" not in result:
+        raise RuntimeError(f"WSGI file copy did not verify (console said: {result!r})")
 
 
 def repair_pythonanywhere() -> None:
     client = PythonAnywhereClient(username=os.environ["API_USER"])
-    reinstall_requirements(client, get_repo_name())
-    sync_wsgi_file(client)
+    repo_name = get_repo_name()
+    reinstall_requirements(client, repo_name)
+    sync_wsgi_file(client, repo_name)
     client.reload_webapp()
 
 
@@ -120,7 +117,7 @@ def main() -> None:
     if changed:
         commit_and_push()
     repair_pythonanywhere()
-    print("Reinstalled requirements, synced the WSGI file, and reloaded the PythonAnywhere webapp.")
+    print("Reinstalled requirements, verified the WSGI file, and reloaded the PythonAnywhere webapp.")
 
 
 if __name__ == "__main__":
