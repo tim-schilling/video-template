@@ -46,6 +46,3 @@ tzdata==2026.3 ; sys_platform == 'win32'
     #   psycopg
 whitenoise==6.12.0
     # via django-howto-template
-
-django-simple-deploy==1.4.1
-dsd-pythonanywhere @ git+https://github.com/caktus/dsd-pythonanywhere@main
