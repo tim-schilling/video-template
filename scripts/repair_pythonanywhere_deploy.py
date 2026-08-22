@@ -77,8 +77,12 @@ def reinstall_requirements(client: PythonAnywhereClient, repo_name: str) -> None
 
 
 def sync_wsgi_file(client: PythonAnywhereClient, repo_name: str) -> None:
+    # PythonAnywhere's WSGI filename is always the lowercased domain, regardless
+    # of the account's actual username casing (e.g. /home/CodenameTim/ but
+    # /var/www/codenametim_..._wsgi.py) -- client.domain_name carries API_USER's
+    # casing verbatim, so it must be lowered here rather than trusted as-is.
     wsgi_src = f"~/{repo_name}/config/wsgi.py"
-    wsgi_dest = f"/var/www/{client.domain_name.replace('.', '_')}_wsgi.py"
+    wsgi_dest = f"/var/www/{client.domain_name.lower().replace('.', '_')}_wsgi.py"
 
     client.run_command(f"cp {wsgi_src} {wsgi_dest}")
 
