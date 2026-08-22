@@ -73,7 +73,9 @@ def commit_and_push() -> None:
 
 
 def reinstall_requirements(client: PythonAnywhereClient, repo_name: str) -> None:
-    client.run_command(f"cd ~/{repo_name} && git pull && pip install -r requirements.txt")
+    client.run_command(
+        f"cd ~/{repo_name} && git pull && pip install -r requirements.txt"
+    )
 
 
 def sync_wsgi_file(client: PythonAnywhereClient, repo_name: str) -> None:
@@ -86,7 +88,9 @@ def sync_wsgi_file(client: PythonAnywhereClient, repo_name: str) -> None:
 
     client.run_command(f"cp {wsgi_src} {wsgi_dest}")
 
-    result = client.run_command(f"cmp -s {wsgi_src} {wsgi_dest} && echo COPY_OK || echo COPY_FAILED")
+    result = client.run_command(
+        f"cmp -s {wsgi_src} {wsgi_dest} && echo COPY_OK || echo COPY_FAILED"
+    )
     if "COPY_OK" not in result:
         raise RuntimeError(f"WSGI file copy did not verify (console said: {result!r})")
 
@@ -104,7 +108,8 @@ def main() -> None:
     parser.add_argument(
         "--remote",
         action="store_true",
-        help="Also commit/push the requirements.txt fix and repair the live PythonAnywhere deploy.",
+        help="Also commit/push the requirements.txt fix and repair the live "
+        "PythonAnywhere deploy.",
     )
     args = parser.parse_args()
 
@@ -121,7 +126,10 @@ def main() -> None:
     if changed:
         commit_and_push()
     repair_pythonanywhere()
-    print("Reinstalled requirements, verified the WSGI file, and reloaded the PythonAnywhere webapp.")
+    print(
+        "Reinstalled requirements, verified the WSGI file, and reloaded the "
+        "PythonAnywhere webapp."
+    )
 
 
 if __name__ == "__main__":
