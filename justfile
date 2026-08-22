@@ -54,7 +54,9 @@ requirements:
 deploy-pythonanywhere-plan:
     just requirements
     op run --env-file=.env.pythonanywhere -- uv run manage.py deploy
+    uv run scripts/repair_pythonanywhere_deploy.py
 
 deploy-pythonanywhere:
     just requirements
     op run --env-file=.env.pythonanywhere -- uv run manage.py deploy --automate-all
+    op run --env-file=.env.pythonanywhere -- uv run scripts/repair_pythonanywhere_deploy.py --remote
